@@ -1,9 +1,7 @@
 name: Example Usage
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   determine-semver-bump:

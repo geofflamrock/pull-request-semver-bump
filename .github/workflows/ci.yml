@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Format check
+        run: npm run format-check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Compare dist with built code
+        run: |
+          if [ -n "$(git status --porcelain dist)" ]; then
+            echo "Error: dist folder is not up to date with built code"
+            echo "Please run 'npm run build' and commit the changes"
+            git diff dist
+            exit 1
+          fi
+          echo "dist folder matches built code"

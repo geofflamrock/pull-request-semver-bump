@@ -47,6 +47,9 @@ web_modules/
 # TypeScript cache
 *.tsbuildinfo
 
+# TypeScript compiled output
+lib
+
 # Optional npm cache directory
 .npm
 
@@ -80,7 +83,6 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 
 # Gatsby files
 .cache/

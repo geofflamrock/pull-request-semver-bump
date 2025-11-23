@@ -1,0 +1,26 @@
+name: 'Pull Request Semver Bump'
+description: 'Determine the next semver bump based on pull request labels'
+author: 'Geoff Lamrock'
+inputs:
+  major:
+    description: 'Multiline list of PR labels that represent major semver bump'
+    required: false
+    default: 'major'
+  minor:
+    description: 'Multiline list of PR labels that represent minor semver bump'
+    required: false
+    default: 'minor'
+  patch:
+    description: 'Multiline list of PR labels that represent patch semver bump'
+    required: false
+    default: 'patch'
+  github-token:
+    description: 'GitHub token for API access'
+    required: false
+    default: ${{ github.token }}
+outputs:
+  semver_bump:
+    description: 'The determined semver bump (major, minor, patch, or none)'
+runs:
+  using: 'node24'
+  main: 'dist/index.js'

@@ -111,6 +111,8 @@ async function run(): Promise<void> {
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(error.message)
+    } else {
+      core.setFailed(String(error))
     }
   }
 }
@@ -287,7 +289,7 @@ export function determineSemverBump(
       break
     }
 
-    // Check for minor labels in this PR (only if no major found yet)
+    // Check for minor labels in this PR
     const hasMinorLabel = minorLabels.some(label =>
       prLabelNames.includes(label)
     )
@@ -299,18 +301,16 @@ export function determineSemverBump(
       core.info(`PR #${pr.number} has minor label: ${matchedLabel}`)
     }
 
-    // Check for patch labels in this PR (only if no major/minor found yet)
-    if (!hasMinor) {
-      const hasPatchLabel = patchLabels.some(label =>
+    // Check for patch labels in this PR
+    const hasPatchLabel = patchLabels.some(label =>
+      prLabelNames.includes(label)
+    )
+    if (hasPatchLabel) {
+      hasPatch = true
+      const matchedLabel = patchLabels.find(label =>
         prLabelNames.includes(label)
       )
-      if (hasPatchLabel) {
-        hasPatch = true
-        const matchedLabel = patchLabels.find(label =>
-          prLabelNames.includes(label)
-        )
-        core.info(`PR #${pr.number} has patch label: ${matchedLabel}`)
-      }
+      core.info(`PR #${pr.number} has patch label: ${matchedLabel}`)
     }
   }
 

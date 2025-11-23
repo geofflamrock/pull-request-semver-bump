@@ -4,7 +4,7 @@
   "description": "GitHub Action to determine semver bump from PR labels",
   "main": "dist/index.js",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --outfile=dist/index.js --sourcemap",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node24 --outfile=dist/index.js --sourcemap",
     "format": "prettier --write '**/*.ts'",
     "format-check": "prettier --check '**/*.ts'",
     "lint": "eslint src/**/*.ts",

@@ -149,4 +149,23 @@ describe('determineSemverBump', () => {
     )
     expect(result).toBe('minor')
   })
+
+  test('finds major label in later PR when earlier PRs have lower priority labels', () => {
+    const prs = [
+      {
+        number: 1,
+        labels: { nodes: [{ name: 'fix' }] }
+      },
+      {
+        number: 2,
+        labels: { nodes: [{ name: 'feature' }] }
+      },
+      {
+        number: 3,
+        labels: { nodes: [{ name: 'breaking' }] }
+      }
+    ]
+    const result = determineSemverBump(prs, ['breaking'], ['feature'], ['fix'])
+    expect(result).toBe('major')
+  })
 })

@@ -30132,37 +30132,30 @@ function determineSemverBump(prs, majorLabels, minorLabels, patchLabels) {
     let hasPatch = false;
     for (const pr of prs) {
         const prLabelNames = pr.labels.nodes.map(label => label.name);
-        // Check for major
-        for (const majorLabel of majorLabels) {
-            if (prLabelNames.includes(majorLabel)) {
-                hasMajor = true;
-                core.info(`PR #${pr.number} has major label: ${majorLabel}`);
-                break;
-            }
-        }
-        // Check for minor (only if no major found yet)
-        if (!hasMajor) {
-            for (const minorLabel of minorLabels) {
-                if (prLabelNames.includes(minorLabel)) {
-                    hasMinor = true;
-                    core.info(`PR #${pr.number} has minor label: ${minorLabel}`);
-                    break;
-                }
-            }
-        }
-        // Check for patch (only if no major or minor found yet)
-        if (!hasMajor && !hasMinor) {
-            for (const patchLabel of patchLabels) {
-                if (prLabelNames.includes(patchLabel)) {
-                    hasPatch = true;
-                    core.info(`PR #${pr.number} has patch label: ${patchLabel}`);
-                    break;
-                }
-            }
-        }
-        // Early exit if major found
-        if (hasMajor) {
+        // Check for major labels in this PR
+        const hasMajorLabel = majorLabels.some(label => prLabelNames.includes(label));
+        if (hasMajorLabel) {
+            hasMajor = true;
+            const matchedLabel = majorLabels.find(label => prLabelNames.includes(label));
+            core.info(`PR #${pr.number} has major label: ${matchedLabel}`);
+            // Early exit - major is highest priority
             break;
+        }
+        // Check for minor labels in this PR (only if no major found yet)
+        const hasMinorLabel = minorLabels.some(label => prLabelNames.includes(label));
+        if (hasMinorLabel) {
+            hasMinor = true;
+            const matchedLabel = minorLabels.find(label => prLabelNames.includes(label));
+            core.info(`PR #${pr.number} has minor label: ${matchedLabel}`);
+        }
+        // Check for patch labels in this PR (only if no major/minor found yet)
+        if (!hasMinor) {
+            const hasPatchLabel = patchLabels.some(label => prLabelNames.includes(label));
+            if (hasPatchLabel) {
+                hasPatch = true;
+                const matchedLabel = patchLabels.find(label => prLabelNames.includes(label));
+                core.info(`PR #${pr.number} has patch label: ${matchedLabel}`);
+            }
         }
     }
     if (hasMajor) {

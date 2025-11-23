@@ -115,7 +115,7 @@ async function run(): Promise<void> {
   }
 }
 
-function parseMultilineInput(input: string): string[] {
+export function parseMultilineInput(input: string): string[] {
   return input
     .split('\n')
     .map(line => line.trim())
@@ -260,7 +260,7 @@ async function getMergedPRsSinceTag(
   return allPRs
 }
 
-function determineSemverBump(
+export function determineSemverBump(
   prs: PullRequest[],
   majorLabels: string[],
   minorLabels: string[],

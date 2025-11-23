@@ -1,0 +1,35 @@
+name: Example Usage
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  determine-semver-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required to fetch all tags
+
+      - name: Determine Semver Bump
+        id: semver
+        uses: ./
+        with:
+          major: |
+            breaking
+            major
+          minor: |
+            feature
+            enhancement
+            minor
+          patch: |
+            bugfix
+            fix
+            patch
+
+      - name: Display Result
+        run: |
+          echo "Semver bump determined: ${{ steps.semver.outputs.semver_bump }}"

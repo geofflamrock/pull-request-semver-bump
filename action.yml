@@ -5,15 +5,15 @@ inputs:
   major:
     description: 'Multiline list of PR labels that represent major semver bump'
     required: false
-    default: ''
+    default: 'major'
   minor:
     description: 'Multiline list of PR labels that represent minor semver bump'
     required: false
-    default: ''
+    default: 'minor'
   patch:
     description: 'Multiline list of PR labels that represent patch semver bump'
     required: false
-    default: ''
+    default: 'patch'
   github-token:
     description: 'GitHub token for API access'
     required: false
@@ -22,5 +22,5 @@ outputs:
   semver_bump:
     description: 'The determined semver bump (major, minor, patch, or none)'
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'

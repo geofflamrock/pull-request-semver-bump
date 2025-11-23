@@ -1,102 +1,104 @@
-import * as core from '@actions/core'
-import * as github from '@actions/github'
+import * as core from '@actions/core';
+import * as github from '@actions/github';
 
 interface PullRequest {
-  number: number
-  labels: { nodes: { name: string }[] }
+  number: number;
+  labels: { nodes: { name: string }[] };
 }
 
 interface GraphQLTag {
-  name: string
+  name: string;
   target: {
-    oid: string
-    committedDate?: string
+    oid: string;
+    committedDate?: string;
     target?: {
-      oid: string
-      committedDate?: string
-    }
-  }
+      oid: string;
+      committedDate?: string;
+    };
+  };
 }
 
 interface GraphQLTagsResponse {
   repository: {
     refs: {
-      nodes: GraphQLTag[]
-    }
-  }
+      nodes: GraphQLTag[];
+    };
+  };
 }
 
 interface GraphQLPRNode {
-  number: number
-  mergedAt?: string
+  number: number;
+  mergedAt?: string;
   labels: {
-    nodes: { name: string }[]
-  }
+    nodes: { name: string }[];
+  };
 }
 
 interface GraphQLPRsResponse {
   repository: {
     pullRequests: {
       pageInfo: {
-        hasNextPage: boolean
-        endCursor: string
-      }
-      nodes: GraphQLPRNode[]
-    }
-  }
+        hasNextPage: boolean;
+        endCursor: string;
+      };
+      nodes: GraphQLPRNode[];
+    };
+  };
 }
 
 interface Tag {
-  name: string
+  name: string;
   target: {
-    oid: string
-    committedDate?: string
-  }
+    oid: string;
+    committedDate?: string;
+  };
 }
 
 async function run(): Promise<void> {
   try {
     // Get inputs
-    const majorLabelsInput = core.getInput('major')
-    const minorLabelsInput = core.getInput('minor')
-    const patchLabelsInput = core.getInput('patch')
-    const token = core.getInput('github-token')
+    const majorLabelsInput = core.getInput('major');
+    const minorLabelsInput = core.getInput('minor');
+    const patchLabelsInput = core.getInput('patch');
+    const token = core.getInput('github-token');
 
     // Parse multiline inputs into arrays
-    const majorLabels = parseMultilineInput(majorLabelsInput)
-    const minorLabels = parseMultilineInput(minorLabelsInput)
-    const patchLabels = parseMultilineInput(patchLabelsInput)
+    const majorLabels = parseMultilineInput(majorLabelsInput);
+    const minorLabels = parseMultilineInput(minorLabelsInput);
+    const patchLabels = parseMultilineInput(patchLabelsInput);
 
-    core.info(`Major labels: ${majorLabels.join(', ')}`)
-    core.info(`Minor labels: ${minorLabels.join(', ')}`)
-    core.info(`Patch labels: ${patchLabels.join(', ')}`)
+    core.info(`Major labels: ${majorLabels.join(', ')}`);
+    core.info(`Minor labels: ${minorLabels.join(', ')}`);
+    core.info(`Patch labels: ${patchLabels.join(', ')}`);
 
     // Initialize GitHub client
-    const octokit = github.getOctokit(token)
-    const { owner, repo } = github.context.repo
+    const octokit = github.getOctokit(token);
+    const { owner, repo } = github.context.repo;
 
     // Get the most recent tag
-    const mostRecentTag = await getMostRecentTag(octokit, owner, repo)
+    const mostRecentTag = await getMostRecentTag(octokit, owner, repo);
+
+    let mergedPRs: PullRequest[];
 
     if (!mostRecentTag) {
-      core.info('No tags found in repository')
-      core.setOutput('semver_bump', 'none')
-      return
+      core.info('No tags found in repository, analyzing all merged PRs');
+      mergedPRs = await getAllMergedPRs(octokit, owner, repo);
+      core.info(`Found ${mergedPRs.length} merged PRs in total`);
+    } else {
+      core.info(`Most recent tag: ${mostRecentTag.name}`);
+
+      // Get merged PRs since the most recent tag
+      mergedPRs = await getMergedPRsSinceTag(
+        octokit,
+        owner,
+        repo,
+        mostRecentTag
+      );
+
+      core.info(
+        `Found ${mergedPRs.length} merged PRs since ${mostRecentTag.name}`
+      );
     }
-
-    core.info(`Most recent tag: ${mostRecentTag.name}`)
-
-    // Get merged PRs since the most recent tag
-    const mergedPRs = await getMergedPRsSinceTag(
-      octokit,
-      owner,
-      repo,
-      mostRecentTag
-    )
-
-    core.info(
-      `Found ${mergedPRs.length} merged PRs since ${mostRecentTag.name}`
-    )
 
     // Determine semver bump based on labels
     const semverBump = determineSemverBump(
@@ -104,15 +106,15 @@ async function run(): Promise<void> {
       majorLabels,
       minorLabels,
       patchLabels
-    )
+    );
 
-    core.info(`Determined semver bump: ${semverBump}`)
-    core.setOutput('semver_bump', semverBump)
+    core.info(`Determined semver bump: ${semverBump}`);
+    core.setOutput('semver_bump', semverBump);
   } catch (error) {
     if (error instanceof Error) {
-      core.setFailed(error.message)
+      core.setFailed(error.message);
     } else {
-      core.setFailed(String(error))
+      core.setFailed(String(error));
     }
   }
 }
@@ -121,7 +123,7 @@ export function parseMultilineInput(input: string): string[] {
   return input
     .split('\n')
     .map(line => line.trim())
-    .filter(line => line.length > 0)
+    .filter(line => line.length > 0);
 }
 
 async function getMostRecentTag(
@@ -153,19 +155,19 @@ async function getMostRecentTag(
         }
       }
     }
-  `
+  `;
 
   const result = await octokit.graphql<GraphQLTagsResponse>(query, {
     owner,
     repo
-  })
-  const tags = result.repository.refs.nodes
+  });
+  const tags = result.repository.refs.nodes;
 
   if (tags.length === 0) {
-    return null
+    return null;
   }
 
-  const tag = tags[0]
+  const tag = tags[0];
 
   // Handle both lightweight and annotated tags
   if (tag.target.committedDate) {
@@ -175,7 +177,7 @@ async function getMostRecentTag(
         oid: tag.target.oid,
         committedDate: tag.target.committedDate
       }
-    }
+    };
   } else if (tag.target.target?.committedDate) {
     return {
       name: tag.name,
@@ -183,7 +185,7 @@ async function getMostRecentTag(
         oid: tag.target.target.oid,
         committedDate: tag.target.target.committedDate
       }
-    }
+    };
   }
 
   // Fallback if date is not available
@@ -192,7 +194,7 @@ async function getMostRecentTag(
     target: {
       oid: tag.target.oid
     }
-  }
+  };
 }
 
 async function getMergedPRsSinceTag(
@@ -201,10 +203,10 @@ async function getMergedPRsSinceTag(
   repo: string,
   tag: Tag
 ): Promise<PullRequest[]> {
-  const tagDate = tag.target.committedDate
+  const tagDate = tag.target.committedDate;
 
   if (!tagDate) {
-    core.warning('Tag date not available, using all merged PRs')
+    core.warning('Tag date not available, using all merged PRs');
   }
 
   const query = `
@@ -227,39 +229,93 @@ async function getMergedPRsSinceTag(
         }
       }
     }
-  `
+  `;
 
-  const allPRs: PullRequest[] = []
-  let hasNextPage = true
-  let cursor: string | undefined
+  const allPRs: PullRequest[] = [];
+  let hasNextPage = true;
+  let cursor: string | undefined;
 
   while (hasNextPage) {
     const result = await octokit.graphql<GraphQLPRsResponse>(query, {
       owner,
       repo,
       cursor
-    })
-    const prs = result.repository.pullRequests.nodes
+    });
+    const prs = result.repository.pullRequests.nodes;
 
     for (const pr of prs) {
       // If we have a tag date, only include PRs merged after it
       if (tagDate && pr.mergedAt && pr.mergedAt <= tagDate) {
-        hasNextPage = false
-        break
+        hasNextPage = false;
+        break;
       }
 
       allPRs.push({
         number: pr.number,
         labels: pr.labels
-      })
+      });
     }
 
     hasNextPage =
-      hasNextPage && result.repository.pullRequests.pageInfo.hasNextPage
-    cursor = result.repository.pullRequests.pageInfo.endCursor
+      hasNextPage && result.repository.pullRequests.pageInfo.hasNextPage;
+    cursor = result.repository.pullRequests.pageInfo.endCursor;
   }
 
-  return allPRs
+  return allPRs;
+}
+
+async function getAllMergedPRs(
+  octokit: ReturnType<typeof github.getOctokit>,
+  owner: string,
+  repo: string
+): Promise<PullRequest[]> {
+  const query = `
+    query($owner: String!, $repo: String!, $cursor: String) {
+      repository(owner: $owner, name: $repo) {
+        pullRequests(first: 100, states: MERGED, orderBy: {field: UPDATED_AT, direction: DESC}, after: $cursor) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
+            number
+            mergedAt
+            labels(first: 50) {
+              nodes {
+                name
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const allPRs: PullRequest[] = [];
+  let hasNextPage = true;
+  let cursor: string | undefined;
+
+  while (hasNextPage) {
+    const result = await octokit.graphql<GraphQLPRsResponse>(query, {
+      owner,
+      repo,
+      cursor
+    });
+    const prs = result.repository.pullRequests.nodes;
+
+    for (const pr of prs) {
+      allPRs.push({
+        number: pr.number,
+        labels: pr.labels
+      });
+    }
+
+    hasNextPage =
+      hasNextPage && result.repository.pullRequests.pageInfo.hasNextPage;
+    cursor = result.repository.pullRequests.pageInfo.endCursor;
+  }
+
+  return allPRs;
 }
 
 export function determineSemverBump(
@@ -268,61 +324,61 @@ export function determineSemverBump(
   minorLabels: string[],
   patchLabels: string[]
 ): string {
-  let hasMajor = false
-  let hasMinor = false
-  let hasPatch = false
+  let hasMajor = false;
+  let hasMinor = false;
+  let hasPatch = false;
 
   for (const pr of prs) {
-    const prLabelNames = pr.labels.nodes.map(label => label.name)
+    const prLabelNames = pr.labels.nodes.map(label => label.name);
 
     // Check for major labels in this PR
     const hasMajorLabel = majorLabels.some(label =>
       prLabelNames.includes(label)
-    )
+    );
     if (hasMajorLabel) {
-      hasMajor = true
+      hasMajor = true;
       const matchedLabel = majorLabels.find(label =>
         prLabelNames.includes(label)
-      )
-      core.info(`PR #${pr.number} has major label: ${matchedLabel}`)
+      );
+      core.info(`PR #${pr.number} has major label: ${matchedLabel}`);
       // Early exit - major is highest priority
-      break
+      break;
     }
 
     // Check for minor labels in this PR
     const hasMinorLabel = minorLabels.some(label =>
       prLabelNames.includes(label)
-    )
+    );
     if (hasMinorLabel) {
-      hasMinor = true
+      hasMinor = true;
       const matchedLabel = minorLabels.find(label =>
         prLabelNames.includes(label)
-      )
-      core.info(`PR #${pr.number} has minor label: ${matchedLabel}`)
+      );
+      core.info(`PR #${pr.number} has minor label: ${matchedLabel}`);
     }
 
     // Check for patch labels in this PR
     const hasPatchLabel = patchLabels.some(label =>
       prLabelNames.includes(label)
-    )
+    );
     if (hasPatchLabel) {
-      hasPatch = true
+      hasPatch = true;
       const matchedLabel = patchLabels.find(label =>
         prLabelNames.includes(label)
-      )
-      core.info(`PR #${pr.number} has patch label: ${matchedLabel}`)
+      );
+      core.info(`PR #${pr.number} has patch label: ${matchedLabel}`);
     }
   }
 
   if (hasMajor) {
-    return 'major'
+    return 'major';
   } else if (hasMinor) {
-    return 'minor'
+    return 'minor';
   } else if (hasPatch) {
-    return 'patch'
+    return 'patch';
   } else {
-    return 'none'
+    return 'none';
   }
 }
 
-run()
+run();
